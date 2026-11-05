@@ -85,6 +85,10 @@ GMod-Server (Lua, data/traitorvoice/config.json)        GMod-Server ↔ TS-Serve
 Gain-Kurve per Lua-Test; MSVC-Build in GitHub Actions (win32 + x64) grün, Artefakt `traitor-voice-windows`
 entsteht. **Nicht geprüft:** alles im Spiel.
 
+**Nach der Übergabe korrigiert (2026-11-05):** Client fordert die Config per `TraitorVoice_Hello` an (statt
+`PlayerInitialSpawn`, dort konnte sie verloren gehen); Wandzählung erkannte nur max. 2 Wände, Spieler/Leichen
+zählen nicht mehr als Wand.
+
 ### Standard-Tasten
 `V` = Sprechen (Nahbereich), `Caps Lock` = Funk, `Bild↑/Bild↓` = Sprechstufe (Abweichung vom Konzept, das Alt+Mausrad
 vorsah – TTT2-Binds kennen keine Kombinationen). Änderbar unter F1 → Tastenbelegung → Traitor Voice.
