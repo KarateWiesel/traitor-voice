@@ -17,7 +17,7 @@ jobs:
       matrix:
         arch: [x64, Win32]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure
         run: cmake -S . -B build -A ${{ matrix.arch }}
       - name: Build
@@ -27,7 +27,7 @@ jobs:
         run: |
           New-Item -ItemType Directory -Force out | Out-Null
           Copy-Item build/Release/*.dll out/
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: dlls-${{ matrix.arch }}
           path: out/*.dll
@@ -35,7 +35,7 @@ jobs:
   lua:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Lua syntax check
         run: |
           sudo apt-get update -q && sudo apt-get install -y -q lua5.1
@@ -45,8 +45,8 @@ jobs:
     needs: [windows, lua]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           path: dl
       - name: Assemble player package
@@ -57,7 +57,7 @@ jobs:
           cp docs/TESTEN.md pkg/ANLEITUNG.md
           cd pkg && zip -r ../traitor-voice-windows.zip . && cd ..
           sha256sum traitor-voice-windows.zip > traitor-voice-windows.zip.sha256
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: traitor-voice-windows
           path: |
@@ -65,7 +65,7 @@ jobs:
             traitor-voice-windows.zip.sha256
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             traitor-voice-windows.zip
