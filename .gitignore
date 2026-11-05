@@ -7,3 +7,6 @@ out/
 *.lib
 *.exp
 *.obj
+
+# lokale Notizen für Claude, nicht im Repo
+docs/UEBERGABE.md
