@@ -1,0 +1,72 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        arch: [x64, Win32]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S . -B build -A ${{ matrix.arch }}
+      - name: Build
+        run: cmake --build build --config Release
+      - name: Collect
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force out | Out-Null
+          Copy-Item build/Release/*.dll out/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dlls-${{ matrix.arch }}
+          path: out/*.dll
+
+  lua:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lua syntax check
+        run: |
+          sudo apt-get update -q && sudo apt-get install -y -q lua5.1
+          find addon -name '*.lua' -print0 | xargs -0 -n1 luac5.1 -p
+
+  package:
+    needs: [windows, lua]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dl
+      - name: Assemble player package
+        run: |
+          mkdir -p pkg/gmod-lua-bin pkg/teamspeak-plugins
+          cp dl/dlls-*/gmcl_traitorvoice_*.dll pkg/gmod-lua-bin/
+          cp dl/dlls-*/traitorvoice_win*.dll pkg/teamspeak-plugins/
+          cp docs/TESTEN.md pkg/ANLEITUNG.md
+          cd pkg && zip -r ../traitor-voice-windows.zip . && cd ..
+          sha256sum traitor-voice-windows.zip > traitor-voice-windows.zip.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: traitor-voice-windows
+          path: |
+            traitor-voice-windows.zip
+            traitor-voice-windows.zip.sha256
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            traitor-voice-windows.zip
+            traitor-voice-windows.zip.sha256
