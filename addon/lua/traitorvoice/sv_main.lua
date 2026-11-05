@@ -2,6 +2,7 @@
 -- Decides who hears whom (ACRE principle: everyone stays in one TS channel, the plugins of
 -- living players mute the dead) and maps players to their TeamSpeak client IDs.
 
+util.AddNetworkString("TraitorVoice_Hello")    -- client -> server: Lua is loaded, please send the config
 util.AddNetworkString("TraitorVoice_Report")   -- client -> server: plugin status, TS client ID
 util.AddNetworkString("TraitorVoice_Transmit") -- client -> server: talking mode + voice level
 util.AddNetworkString("TraitorVoice_Roster")   -- server -> client: who to hear and how
@@ -14,7 +15,12 @@ hook.Add("PlayerCanHearPlayersVoice", "TraitorVoice", function()
     return false, false
 end)
 
-hook.Add("PlayerInitialSpawn", "TraitorVoice", function(ply)
+-- Net messages sent in PlayerInitialSpawn can arrive before the client's Lua is loaded,
+-- so the client asks for the config once it is ready.
+net.Receive("TraitorVoice_Hello", function(_, ply)
+    local now = CurTime()
+    if (ply.tvLastHello or 0) > now - 2 then return end
+    ply.tvLastHello = now
     TV.SendConfig(ply)
 end)
 

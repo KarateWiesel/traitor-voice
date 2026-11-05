@@ -51,6 +51,19 @@ net.Receive("TraitorVoice_Config", function()
     S.level = TV.ClampLevel(S.level)
 end)
 
+-- Ask until the config arrives (the first request can be lost while the client is loading).
+local nextHello = 0
+hook.Add("Think", "TraitorVoice_Hello", function()
+    if S.configReceived then
+        hook.Remove("Think", "TraitorVoice_Hello")
+        return
+    end
+    if not IsValid(LocalPlayer()) or CurTime() < nextHello then return end
+    nextHello = CurTime() + 3
+    net.Start("TraitorVoice_Hello")
+    net.SendToServer()
+end)
+
 hook.Add("TTTPrepareRound", "TraitorVoice_ResetLevel", function()
     S.level = TV.Config.default_level
 end)
@@ -177,15 +190,21 @@ end
 -- Occlusion: count walls between listener and speaker (cached, 10 per second per speaker)
 ---------------------------------------------------------------------------------------------
 
-local function countWalls(from, to, filter, maxWalls)
+-- Players and corpses are not walls.
+local function traceFilter(ent)
+    return not (ent:IsPlayer() or ent:GetClass() == "prop_ragdoll")
+end
+
+local function countWalls(from, to, maxWalls)
     local dir = to - from
     local len = dir:Length()
     if len < 1 then return 0 end
     dir:Normalize()
     local walls = 0
     local start = from
-    for _ = 1, maxWalls + 1 do
-        local tr = util.TraceLine({ start = start, endpos = to, filter = filter, mask = MASK_SOLID })
+    -- each wall takes up to two traces: one that hits it, one that starts inside it
+    for _ = 1, 2 * maxWalls + 2 do
+        local tr = util.TraceLine({ start = start, endpos = to, filter = traceFilter, mask = MASK_SOLID })
         if tr.StartSolid then
             -- we are inside a wall: jump to where the trace left it
             local leave = tr.FractionLeftSolid or 1
@@ -202,14 +221,14 @@ local function countWalls(from, to, filter, maxWalls)
     return walls
 end
 
-local function occlusionFor(entIndex, from, to, filter)
+local function occlusionFor(entIndex, from, to)
     local cfg = TV.Config.occlusion
     if not cfg.enabled then return 0 end
     local now = CurTime()
     local c = S.occlusion[entIndex]
     if c and now < c.nextCheck then return c.value end
     local maxWalls = cfg.max_walls
-    local walls = countWalls(from, to, filter, maxWalls)
+    local walls = countWalls(from, to, maxWalls)
     local value = math.Clamp(walls / maxWalls, 0, 1)
     S.occlusion[entIndex] = { value = value, nextCheck = now + 0.1 }
     return value
@@ -222,7 +241,7 @@ end
 local clientsBuffer = {}
 
 local function buildClients()
-    local listenerPos, listenerAng, viewTarget = listenerView()
+    local listenerPos, listenerAng = listenerView()
     local right, up, fwd = listenerAng:Right(), listenerAng:Up(), listenerAng:Forward()
 
     local n = 0
@@ -241,10 +260,7 @@ local function buildClients()
                 local distM = d:Length() / UPM
                 gain = TV.DistanceGain(distM, r.level)
                 if gain > 0 then
-                    local traceFilter = { LocalPlayer() }
-                    if IsValid(viewTarget) then traceFilter[#traceFilter + 1] = viewTarget end
-                    if IsValid(ply) then traceFilter[#traceFilter + 1] = ply end
-                    occ = occlusionFor(entIndex, listenerPos, pos, traceFilter)
+                    occ = occlusionFor(entIndex, listenerPos, pos)
                     if occ >= 1 then
                         gain = 0
                     else
