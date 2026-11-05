@@ -35,19 +35,30 @@ GMod-Server (Lua, config.json)
 Frühe Entwicklung – Meilenstein **M0 (Machbarkeit)**. Siehe [docs/KONZEPT.md](docs/KONZEPT.md) und
 [docs/TESTEN.md](docs/TESTEN.md).
 
+## Installation
+
+Alles liegt unter [Releases](https://github.com/KarateWiesel/traitor-voice/releases):
+
+- **Spieler:** `TraitorVoice-Setup-….exe` ausführen. Er installiert das GMod-Modul und das TeamSpeak-Plugin.
+  Aus dem Workshop braucht ein Spieler nichts, die Lua-Dateien kommen beim Beitreten vom Server.
+- **Server:** `traitor-voice-server-addon-….zip` nach `garrysmod/addons/` entpacken, Server starten,
+  `teamspeak.address` in `garrysmod/data/traitorvoice/config.json` eintragen, `traitorvoice_reload`.
+
 ## Projektstruktur
 
 | Ordner | Inhalt |
 | --- | --- |
-| `addon/` | GMod-Addon (Lua), kommt in den Workshop / `garrysmod/addons` |
+| `addon/` | GMod-Addon (Lua) für den Server, `garrysmod/addons` (später auch Workshop) |
 | `module/` | `gmcl_traitorvoice` – Client-DLL für GMod (C++, Windows win32/win64) |
 | `ts3plugin/` | TeamSpeak-3-Plugin (C++, Windows) |
 | `shared/` | Gemeinsames Protokoll von DLL und Plugin |
+| `installer/` | Installer für Spieler (Inno Setup) |
 | `docs/` | Konzept, Testanleitung |
 
 ## Bauen
 
-Die DLLs baut GitHub Actions automatisch (Tab **Actions** → Artefakt `traitor-voice-windows`).
+GitHub Actions baut bei jedem Push DLLs, Installer und Server-ZIP (Tab **Actions** → Artefakt).
+Ein Tag `v*` veröffentlicht daraus ein Release; Tags mit Bindestrich (`v0.1.0-test.1`) als Vorabversion.
 Lokal mit Visual Studio 2022 und CMake:
 
 ```

@@ -5,30 +5,35 @@ Lautstärke eines Mitspielers live der Entfernung folgt. Dafür braucht es 2 Per
 
 ## 1. Dateien holen
 
-GitHub → Tab **Actions** → letzter Lauf von „Build“ → Artefakt **traitor-voice-windows** herunterladen
-und entpacken. Darin:
+GitHub → [Releases](https://github.com/KarateWiesel/traitor-voice/releases) → neuestes Release. Darin:
 
-| Ordner | Inhalt |
+| Datei | Für wen |
 | --- | --- |
-| `gmod-lua-bin/` | `gmcl_traitorvoice_win32.dll`, `gmcl_traitorvoice_win64.dll` |
-| `teamspeak-plugins/` | `traitorvoice_win32.dll`, `traitorvoice_win64.dll` |
-
-(Ein Installer kommt in M6. Bis dahin von Hand kopieren.)
+| `TraitorVoice-Setup-….exe` | jeder Spieler |
+| `traitor-voice-server-addon-….zip` | den GMod-Server |
+| `traitor-voice-windows-manual-….zip` | nur falls der Installer nicht geht (DLLs zum Kopieren) |
 
 ## 2. Spieler (beide Tester)
 
-1. Beide `gmcl_traitorvoice_*.dll` nach
-   `…\Steam\steamapps\common\GarrysMod\garrysmod\lua\bin\` kopieren (Ordner `bin` ggf. anlegen).
-2. Beide `traitorvoice_*.dll` nach `%APPDATA%\TS3Client\plugins\` kopieren.
+1. `TraitorVoice-Setup-….exe` ausführen. Windows zeigt evtl. „Der Computer wurde durch Windows geschützt“ →
+   **Weitere Informationen → Trotzdem ausführen** (der Installer ist nicht kostenpflichtig signiert).
+2. Der Installer findet Garry's Mod selbst. Er legt das Modul nach `garrysmod\lua\bin\` und das Plugin nach
+   `%APPDATA%\TS3Client\plugins\`.
 3. TeamSpeak 3 neu starten → **Extras → Optionen → Addons**: „Traitor Voice“ muss aktiv sein.
 4. In TeamSpeak unter **Optionen → Aufnahme** „Sprachaktivierung“ oder „Dauerhaft senden“ einstellen
    (nicht TeamSpeaks eigenes Push-to-Talk). Ab jetzt steuert das Spiel, wann gesendet wird.
 5. Beide in **denselben** TS-Channel.
 
+Die Spieler brauchen **nichts aus dem Workshop**: Die Lua-Dateien schickt der GMod-Server beim Beitreten
+automatisch mit.
+
+Ohne Installer: aus dem Manual-ZIP `gmod-lua-bin\*.dll` nach `…\GarrysMod\garrysmod\lua\bin\` (Ordner `bin`
+ggf. anlegen) und `teamspeak-plugins\*.dll` nach `%APPDATA%\TS3Client\plugins\` kopieren.
+
 ## 3. Server
 
-1. Ordner `addon/` aus dem Repo nach `garrysmod/addons/traitor-voice/` auf den GMod-Server kopieren
-   (Linux ist ok – serverseitig läuft nur Lua).
+1. `traitor-voice-server-addon-….zip` entpacken und den Ordner `traitor-voice` nach `garrysmod/addons/`
+   auf den GMod-Server legen (Linux ist ok – serverseitig läuft nur Lua).
 2. Server starten. Die Config entsteht unter `garrysmod/data/traitorvoice/config.json`.
 3. `teamspeak.address` eintragen, in der Server-Konsole `traitorvoice_reload`.
 
@@ -51,5 +56,5 @@ und entpacken. Darin:
 
 ## Bekannte Grenzen von M0
 
-- Kein Installer, keine Klick-Sounds beim Funk, keine Lautstärke pro Spieler
+- Keine Klick-Sounds beim Funk, keine Lautstärke pro Spieler
 - Nur Windows für Spieler

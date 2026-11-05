@@ -43,30 +43,67 @@ jobs:
 
   package:
     needs: [windows, lua]
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/download-artifact@v8
         with:
           path: dl
-      - name: Assemble player package
+      - name: Version
+        id: ver
+        shell: pwsh
         run: |
-          mkdir -p pkg/gmod-lua-bin pkg/teamspeak-plugins
-          cp dl/dlls-*/gmcl_traitorvoice_*.dll pkg/gmod-lua-bin/
-          cp dl/dlls-*/traitorvoice_win*.dll pkg/teamspeak-plugins/
-          cp docs/TESTEN.md pkg/ANLEITUNG.md
-          cd pkg && zip -r ../traitor-voice-windows.zip . && cd ..
-          sha256sum traitor-voice-windows.zip > traitor-voice-windows.zip.sha256
+          if ("${{ github.ref }}" -like "refs/tags/v*") { $v = "${{ github.ref_name }}".Substring(1) }
+          else { $v = "0.1.0-dev." + "${{ github.sha }}".Substring(0, 7) }
+          "version=$v" >> $env:GITHUB_OUTPUT
+      - name: Collect DLLs
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Copy-Item dl/dlls-*/*.dll dist/
+          Get-ChildItem dist
+      - name: Build installer
+        shell: pwsh
+        run: |
+          $iscc = Get-ChildItem "C:\Program Files*\Inno Setup*\ISCC.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $iscc) {
+            choco install innosetup -y --no-progress | Out-Null
+            $iscc = Get-ChildItem "C:\Program Files*\Inno Setup*\ISCC.exe" | Select-Object -First 1
+          }
+          & $iscc.FullName "/DAppVersion=${{ steps.ver.outputs.version }}" "/DBinDir=$PWD\dist" installer\traitorvoice.iss
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Assemble packages
+        shell: pwsh
+        run: |
+          $v = "${{ steps.ver.outputs.version }}"
+          # Server: the addon folder, ready for garrysmod/addons/
+          New-Item -ItemType Directory -Force pkg/server/traitor-voice | Out-Null
+          Copy-Item -Recurse addon/* pkg/server/traitor-voice/
+          Compress-Archive -Path pkg/server/traitor-voice -DestinationPath "out/traitor-voice-server-addon-$v.zip"
+          # Players without installer: the four DLLs and the test guide
+          New-Item -ItemType Directory -Force pkg/manual/gmod-lua-bin, pkg/manual/teamspeak-plugins | Out-Null
+          Copy-Item dist/gmcl_traitorvoice_*.dll pkg/manual/gmod-lua-bin/
+          Copy-Item dist/traitorvoice_win*.dll pkg/manual/teamspeak-plugins/
+          Copy-Item docs/TESTEN.md pkg/manual/ANLEITUNG.md
+          Compress-Archive -Path pkg/manual/* -DestinationPath "out/traitor-voice-windows-manual-$v.zip"
+          Push-Location out
+          Get-ChildItem -File | Where-Object Name -ne SHA256SUMS.txt | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.Name -Algorithm SHA256).Hash.ToLower(), $_.Name
+          } | Set-Content -Encoding ascii SHA256SUMS.txt
+          Get-Content SHA256SUMS.txt
+          Pop-Location
       - uses: actions/upload-artifact@v7
         with:
-          name: traitor-voice-windows
-          path: |
-            traitor-voice-windows.zip
-            traitor-voice-windows.zip.sha256
+          name: traitor-voice-${{ steps.ver.outputs.version }}
+          path: out/*
       - name: Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v3
         with:
-          files: |
-            traitor-voice-windows.zip
-            traitor-voice-windows.zip.sha256
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          files: out/*
+          body: |
+            **Spieler:** `TraitorVoice-Setup-${{ steps.ver.outputs.version }}.exe` ausführen (installiert GMod-Modul und TeamSpeak-Plugin).
+            **Server:** `traitor-voice-server-addon-${{ steps.ver.outputs.version }}.zip` nach `garrysmod/addons/` entpacken.
+            Ohne Installer: `traitor-voice-windows-manual-…zip`. Prüfsummen: `SHA256SUMS.txt`.
+            Testanleitung: [docs/TESTEN.md](https://github.com/KarateWiesel/traitor-voice/blob/main/docs/TESTEN.md)
